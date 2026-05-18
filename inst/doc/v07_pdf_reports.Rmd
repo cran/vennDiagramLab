@@ -1,0 +1,73 @@
+---
+title: "PDF reports"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{PDF reports}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# Skip evaluation of all chunks on CRAN's auto-check farm to fit the
+# 10-minute build budget. Locally, on CI, and under devtools::check(),
+# NOT_CRAN=true and all chunks evaluate normally. The vignette source
+# (which CRAN users see in browseVignettes() / vignette()) is unchanged.
+NOT_CRAN <- identical(tolower(Sys.getenv("NOT_CRAN")), "true")
+knitr::opts_chunk$set(eval = NOT_CRAN)
+```
+
+# PDF reports
+
+`to_pdf_report()` produces a multi-page US-Letter-landscape PDF combining
+the venn diagram, UpSet plot, statistics tables, network view, and a
+methodology page — equivalent to the web tool's "Generate Report" button.
+
+```{r load}
+library(vennDiagramLab)
+result <- analyze(load_sample("dataset_real_cancer_drivers_4"))
+```
+
+## Generating the report
+
+Save to a temporary file (vignettes shouldn't write into the package
+directory):
+
+```{r generate, eval = NOT_CRAN && (getRversion() >= "4.6")}
+out <- tempfile(fileext = ".pdf")
+to_pdf_report(result, path = out, title = "Cancer driver overlap")
+file.exists(out)
+file.size(out)   # bytes
+```
+
+(The chunk above is gated on `R >= 4.6` because the report embeds an UpSet
+panel via `ComplexUpset`, whose CRAN release (1.3.3) is incompatible with
+`ggplot2 >= 4.0` on older R. See `?vennDiagramLab::to_pdf_report` for
+context and workarounds.)
+
+## What the report contains
+
+By default, every report has 5 page types:
+
+1. **Overview** — metadata (timestamp, dataset, set count) + set-size table.
+2. **Venn + UpSet** — rasterized venn (left) + UpSet plot (right).
+3. **Statistics** — Jaccard / Dice / Hypergeometric tables (per-page on 7+
+   sets).
+4. **Network** — set-relationship graph + significant edges list.
+5. **About** — methodology notes (Venn / UpSet / Network / metric
+   definitions).
+
+Pages 4 (network) and 5 (about) can be turned off:
+
+```{r minimal, eval = FALSE}
+to_pdf_report(result, "venn_only.pdf",
+              include_network = FALSE,
+              include_about   = FALSE)
+```
+
+## What's next
+
+* `vignette("v02_real_cancer_drivers")` — see the analysis that feeds the
+  report.
+* `vignette("v08_custom_styling_and_export")` — multi-format export
+  beyond PDF (SVG, PNG).

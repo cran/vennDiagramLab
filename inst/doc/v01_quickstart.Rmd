@@ -1,0 +1,83 @@
+---
+title: "Quickstart"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Quickstart}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# Skip evaluation of all chunks on CRAN's auto-check farm to fit the
+# 10-minute build budget. Locally, on CI, and under devtools::check(),
+# NOT_CRAN=true and all chunks evaluate normally. The vignette source
+# (which CRAN users see in browseVignettes() / vignette()) is unchanged.
+NOT_CRAN <- identical(tolower(Sys.getenv("NOT_CRAN")), "true")
+knitr::opts_chunk$set(eval = NOT_CRAN)
+```
+
+# Quickstart
+
+Five steps to your first Venn diagram with `vennDiagramLab`.
+
+## 1. Load the package
+
+```{r load}
+library(vennDiagramLab)
+```
+
+## 2. Pick a bundled sample
+
+The package ships five sample datasets (3 biological, 2 mock).
+
+```{r samples}
+list_samples()
+```
+
+## 3. Load it as a `VennDataset`
+
+`load_sample()` returns an S4 `VennDataset` with deduplicated set members and
+first-seen item ordering (matching the web tool's CSV semantics).
+
+```{r load-sample}
+ds <- load_sample("dataset_real_cancer_drivers_4")
+ds@set_names
+vapply(ds@items, length, integer(1L))   # set sizes
+```
+
+## 4. Analyze
+
+`analyze()` resolves the model, enumerates regions, and returns a
+`RegionResult`. With `model = "auto"` (the default), it picks the canonical
+SVG model for the dataset's set count.
+
+```{r analyze}
+result <- analyze(ds)
+result@model
+length(result@regions)   # number of non-empty regions
+```
+
+## 5. Render
+
+```{r render}
+svg <- render_venn_svg(result)
+nchar(svg)        # SVG length in bytes
+substr(svg, 1, 80)
+```
+
+To save the SVG:
+
+```{r save, eval = FALSE}
+writeLines(svg, "cancer_drivers.svg")
+```
+
+## What's next
+
+* `vignette("v02_real_cancer_drivers")` — full walkthrough with custom names,
+  colors, and biological interpretation.
+* `vignette("v04_upset_vs_venn_vs_network")` — choose the right visualization
+  per set count.
+* `vignette("v05_statistics_deep_dive")` — Jaccard, Dice, hypergeometric, BH-FDR
+  with worked examples.
+* `vignette("v07_pdf_reports")` — generate publication-ready multi-page PDFs.

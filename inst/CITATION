@@ -1,0 +1,34 @@
+## encoding: UTF-8
+## inst/CITATION — overrides default citation() output for vennDiagramLab.
+## The `meta` variable is auto-injected by R when this file is parsed
+## (utils::readCitationFile assigns it from the DESCRIPTION). Never call
+## utils::packageDescription() here: that returns NA when the package is
+## not yet installed (as during the CRAN incoming-feasibility check) and
+## NA$Version then errors out, breaking the submission.
+
+year    <- if (length(meta$Date)) sub("-.*$", "", meta$Date) else format(Sys.Date(), "%Y")
+version <- meta$Version
+
+bibentry(
+    bibtype  = "Manual",
+    key      = "vennDiagramLab-software",
+    title    = "vennDiagramLab: Headless Venn diagram analysis and rendering",
+    author   = c(
+        person("Zoltán",     "Dul",          email = "zoltan.dul@gmail.com"),
+        person("Márton",     "Ölbei"),
+        person("N. Shaun B.", "Thomas"),
+        person("Azeddine",   "Si Ammour"),
+        person("Attila",     "Csikász-Nagy")
+    ),
+    year     = year,
+    note     = paste0("R package version ", version),
+    url      = "https://zoliqua.github.io/Venn-Diagram-Lab/r/",
+    doi      = "10.5281/zenodo.19510813",
+    textVersion = paste0(
+        "Dul Z., Olbei M., Thomas N.S.B., Si Ammour A., Csikasz-Nagy A. (",
+        year, "). vennDiagramLab: Headless Venn diagram analysis and ",
+        "rendering. R package version ", version,
+        ". https://doi.org/10.5281/zenodo.19510813"
+    ),
+    header   = "To cite vennDiagramLab in publications, please use:"
+)

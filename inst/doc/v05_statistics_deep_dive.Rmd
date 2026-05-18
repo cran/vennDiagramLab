@@ -1,0 +1,128 @@
+---
+title: "Statistics deep dive (Jaccard, Dice, hypergeometric, BH-FDR)"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Statistics deep dive (Jaccard, Dice, hypergeometric, BH-FDR)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# Skip evaluation of all chunks on CRAN's auto-check farm to fit the
+# 10-minute build budget. Locally, on CI, and under devtools::check(),
+# NOT_CRAN=true and all chunks evaluate normally. The vignette source
+# (which CRAN users see in browseVignettes() / vignette()) is unchanged.
+NOT_CRAN <- identical(tolower(Sys.getenv("NOT_CRAN")), "true")
+knitr::opts_chunk$set(eval = NOT_CRAN)
+```
+
+# Statistics deep dive
+
+`vennDiagramLab` reports five pairwise metrics for every set pair plus a
+multiple-testing correction. This vignette explains what each metric means,
+when to prefer it, and how to reproduce the values that appear in the web
+tool's significance coloring.
+
+```{r load}
+library(vennDiagramLab)
+result <- analyze(load_sample("dataset_real_cancer_drivers_4"))
+stats <- statistics(result)
+```
+
+## The five metrics
+
+For two sets `A` and `B` of sizes `|A|`, `|B|` with intersection `|A ∩ B|`
+drawn from a universe of `N` items:
+
+* **Jaccard** = `|A ∩ B| / |A ∪ B|`. Range `[0, 1]`. Symmetric.
+* **Dice** = `2 |A ∩ B| / (|A| + |B|)`. Range `[0, 1]`. Symmetric. Always
+  `>= Jaccard`; the two relate by `Dice = 2J / (1 + J)`.
+* **Overlap coefficient** = `|A ∩ B| / min(|A|, |B|)`. Range `[0, 1]`.
+  Equal to 1 when one set is contained in the other.
+* **Hypergeometric p-value** — probability of observing `|A ∩ B|` or more
+  shared items by chance, given `|A|`, `|B|`, and `N`. Tests over-
+  representation.
+* **Fold enrichment** = `(|A ∩ B| * N) / (|A| * |B|)`. The ratio of observed
+  to expected intersection size under independence. `> 1` is over-
+  representation.
+
+## Compute one metric directly
+
+The helpers are exported and stateless:
+
+```{r helpers}
+jaccard(size_a = 138, size_b = 581, intersection = 100)
+dice(size_a = 138, size_b = 581, intersection = 100)
+overlap_coefficient(size_a = 138, size_b = 581, intersection = 100)
+hypergeometric_p_value(N = 20000, K = 138, n = 581, k = 100)
+fold_enrichment(N = 20000, K = 138, n = 581, k = 100)
+```
+
+The hypergeometric p-value is essentially zero: 100 shared genes out of an
+expected `(138 * 581) / 20000 ≈ 4` is a 25× enrichment.
+
+## All pairs at once
+
+`statistics(result)` returns five tables (four square `NxN` matrices for the
+ratio metrics + a long-form data.frame for the hypergeometric test):
+
+```{r stats-tables}
+stats@jaccard
+```
+
+```{r stats-hyp}
+head(stats@hypergeometric)
+```
+
+## BH-FDR adjustment
+
+`stats@hypergeometric` already carries the BH-FDR-adjusted q-value
+(`p_adjusted`) and a boolean `significant` (q < 0.05) and `highly_significant`
+(q < 0.001). The adjustment uses `stats::p.adjust(method = "BH")`:
+
+```{r bh-fdr}
+raw_p <- stats@hypergeometric$p_value
+adjusted <- bh_fdr(raw_p)
+all.equal(adjusted, stats@hypergeometric$p_adjusted)
+```
+
+For unrelated p-values, BH-FDR is more permissive than Bonferroni and more
+conservative than no correction:
+
+```{r bh-fdr-toy}
+toy_p <- c(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 0.9)
+data.frame(
+    raw            = toy_p,
+    bonferroni     = pmin(toy_p * length(toy_p), 1),
+    bh_fdr         = bh_fdr(toy_p)
+)
+```
+
+## broom-compatible long-form
+
+`broom::tidy()` produces a tibble that's pipeline-friendly (one row per
+pair, all metrics in one frame, sorted by adjusted p-value):
+
+```{r tidy}
+broom::tidy(result)
+```
+
+## Reproducing the web tool's coloring
+
+The web tool colors significant pairs via the same `p_adjusted` thresholds:
+
+```{r reproduce}
+sig_table <- broom::tidy(result)
+sig_table$colour <- ifelse(sig_table$highly_significant, "red",
+                    ifelse(sig_table$significant,        "orange",
+                                                          "grey"))
+sig_table[, c("set_a", "set_b", "p_adjusted", "colour")]
+```
+
+## What's next
+
+* `vignette("v02_real_cancer_drivers")` — see these stats in the context of a
+  real biological analysis.
+* `vignette("v06_pipeline_integration")` — feed `broom::tidy()` into a
+  downstream tidyverse pipeline.

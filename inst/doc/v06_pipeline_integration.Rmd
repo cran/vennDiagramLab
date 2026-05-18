@@ -1,0 +1,105 @@
+---
+title: "Pipeline integration (targets / drake)"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Pipeline integration (targets / drake)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# Skip evaluation of all chunks on CRAN's auto-check farm to fit the
+# 10-minute build budget. Locally, on CI, and under devtools::check(),
+# NOT_CRAN=true and all chunks evaluate normally. The vignette source
+# (which CRAN users see in browseVignettes() / vignette()) is unchanged.
+NOT_CRAN <- identical(tolower(Sys.getenv("NOT_CRAN")), "true")
+knitr::opts_chunk$set(eval = NOT_CRAN)
+```
+
+# Pipeline integration
+
+`vennDiagramLab` is library-first and tidyverse-friendly. The
+`broom`-compatible S3 methods on `RegionResult` make it trivial to plug into
+`targets` / `drake` workflows or any pipeline that expects tidy data.
+
+```{r load}
+library(vennDiagramLab)
+result <- analyze(load_sample("dataset_real_cancer_drivers_4"))
+```
+
+## broom methods
+
+Three methods convert a `RegionResult` to a tibble at three different
+levels of aggregation:
+
+* `tidy(result)` — one row per set pair, all five pairwise metrics
+* `glance(result)` — one row, headline numbers
+* `augment(result)` — one row per item, set-membership flags + region label
+
+```{r broom}
+broom::glance(result)
+head(broom::tidy(result))
+head(broom::augment(result))
+```
+
+## Combining with dplyr
+
+If you want to filter to only the highly significant pairs:
+
+```{r dplyr, eval = NOT_CRAN && requireNamespace("dplyr", quietly = TRUE)}
+broom::tidy(result) |>
+    dplyr::filter(highly_significant) |>
+    dplyr::arrange(dplyr::desc(jaccard)) |>
+    dplyr::select(set_a, set_b, intersection, jaccard, p_adjusted)
+```
+
+Or count items per region:
+
+```{r dplyr-augment, eval = NOT_CRAN && requireNamespace("dplyr", quietly = TRUE)}
+broom::augment(result) |>
+    dplyr::count(region_label, sort = TRUE)
+```
+
+## targets pipeline (sketch)
+
+A simple `_targets.R` file:
+
+```{r targets-pipeline, eval = FALSE}
+library(targets)
+
+list(
+    tar_target(ds,        load_sample("dataset_real_cancer_drivers_4")),
+    tar_target(result,    analyze(ds)),
+    tar_target(stats_df,  broom::tidy(result)),
+    tar_target(genes_df,  broom::augment(result)),
+    tar_target(venn_svg,  render_venn_svg(result)),
+    tar_target(venn_path,
+               { writeLines(venn_svg, "venn.svg"); "venn.svg" },
+               format = "file")
+)
+```
+
+Run with `targets::tar_make()`. Each step caches independently, so
+re-running after only changing the sort order in a downstream report does
+not re-run the analysis.
+
+## Caching tip
+
+`statistics(result)` recomputes on every call (no S4 lazy-property
+equivalent). If you call it many times, cache it once:
+
+```{r cache}
+stats <- statistics(result)
+str(stats@jaccard, max.level = 1)
+```
+
+Inside a `targets` pipeline, this is a non-issue because `tar_target(stats,
+statistics(result))` caches it for you.
+
+## What's next
+
+* `vignette("v05_statistics_deep_dive")` — what the metrics in
+  `broom::tidy()` actually mean.
+* `vignette("v07_pdf_reports")` — turning a result into a PDF artifact for a
+  pipeline.

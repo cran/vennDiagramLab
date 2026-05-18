@@ -1,0 +1,120 @@
+---
+title: "Custom styling and export"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Custom styling and export}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# Skip evaluation of all chunks on CRAN's auto-check farm to fit the
+# 10-minute build budget. Locally, on CI, and under devtools::check(),
+# NOT_CRAN=true and all chunks evaluate normally. The vignette source
+# (which CRAN users see in browseVignettes() / vignette()) is unchanged.
+NOT_CRAN <- identical(tolower(Sys.getenv("NOT_CRAN")), "true")
+knitr::opts_chunk$set(eval = NOT_CRAN)
+```
+
+# Custom styling and export
+
+`vennDiagramLab` separates analysis from rendering. Once you have a
+`RegionResult`, you can render it with custom names, custom colors,
+post-process the SVG, embed it in a ggplot2 chain via `geom_venn()`, or
+export to PNG / PDF.
+
+```{r load}
+library(vennDiagramLab)
+result <- analyze(load_sample("dataset_real_cancer_drivers_4"))
+```
+
+## Custom names
+
+Pass a per-letter mapping (`A`-`I`) to override the dataset's set names:
+
+```{r names}
+svg <- render_venn_svg(
+    result,
+    set_names = c(A = "Vogelstein\n(2013)",
+                   B = "COSMIC CGC",
+                   C = "OncoKB",
+                   D = "IntOGen"),
+    title = "Pan-source cancer driver agreement"
+)
+substr(svg, 1, 60)
+```
+
+## Custom colors
+
+Pass a per-letter hex map. Each letter's color is applied to the matching
+shape AND the legend bullet (and, where present, the Euler extra shape).
+
+```{r colors}
+svg <- render_venn_svg(
+    result,
+    colors = c(A = "#E69F00", B = "#56B4E9", C = "#009E73", D = "#CC79A7")
+)
+nchar(svg)
+```
+
+## Hide the count labels
+
+```{r hide-counts}
+svg_clean <- render_venn_svg(result, show_counts = FALSE)
+nchar(svg_clean)
+```
+
+(`show_names = FALSE` does the analogous thing for set names.)
+
+## Post-render SVG manipulation with xml2
+
+The returned SVG is a plain string; parse it with `xml2` to make targeted
+edits (e.g. set the page background or add a watermark):
+
+```{r xml2, eval = NOT_CRAN && requireNamespace("xml2", quietly = TRUE)}
+svg <- render_venn_svg(result)
+doc <- xml2::read_xml(svg)
+xml2::xml_attr(doc, "viewBox")
+```
+
+## Embed in a ggplot2 chain
+
+`geom_venn()` returns a list of layers that draws the venn on a
+unit-square coordinate system, ready to compose with titles, themes, and
+other annotations.
+
+```{r ggplot, eval = NOT_CRAN}
+library(ggplot2)
+ggplot() +
+    geom_venn(data = result) +
+    theme_void() +
+    labs(title = "4 cancer-driver sources",
+          subtitle = "Vogelstein, COSMIC CGC, OncoKB, IntOGen") +
+    theme(plot.title = element_text(size = 14, face = "bold"),
+          plot.subtitle = element_text(size = 10, colour = "grey40"))
+```
+
+## Multi-format export
+
+`render_venn_svg()` returns a string. Convert it to PNG or PDF via the
+`rsvg` package (already a hard import of `vennDiagramLab`):
+
+```{r export, eval = NOT_CRAN}
+svg <- render_venn_svg(result)
+png_path <- tempfile(fileext = ".png")
+rsvg::rsvg_png(charToRaw(svg), png_path, width = 1200)
+file.size(png_path)
+
+pdf_path <- tempfile(fileext = ".pdf")
+rsvg::rsvg_pdf(charToRaw(svg), pdf_path)
+file.size(pdf_path)
+```
+
+For a multi-page composite report (venn + upset + statistics + network + about), use `to_pdf_report()` — see `vignette("v07_pdf_reports")`.
+
+## What's next
+
+* `vignette("v01_quickstart")` — basic usage.
+* `vignette("v04_upset_vs_venn_vs_network")` — alternative visualizations.
+* `vignette("v07_pdf_reports")` — composite multi-page PDF reports.
