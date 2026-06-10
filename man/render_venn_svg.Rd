@@ -11,7 +11,10 @@ render_venn_svg(
   colors = NULL,
   title = NULL,
   show_names = TRUE,
-  show_counts = TRUE
+  show_counts = TRUE,
+  show_items = FALSE,
+  item_options = NULL,
+  highlight = NULL
 )
 }
 \arguments{
@@ -31,6 +34,23 @@ text is preserved.}
 \item{show_names}{If `FALSE`, blanks every `NameA-I` element.}
 
 \item{show_counts}{If `FALSE`, blanks every `Count_*` and `CountSUM_*` element.}
+
+\item{show_items}{If `TRUE`, replace the per-region count text with the
+actual item identifiers (rendered as `<tspan>` lines inside each
+`Count_*` text node). Default `FALSE`.}
+
+\item{item_options}{Named list of overrides for the item-text engine.
+Recognised keys: `max_items_per_region` (default 20), `ncol_items`
+(default 1), `truncate_long_names` (default 12; 0 disables),
+`line_height` (default 10), `font_size` (default 8),
+`show_counts_with_items` (default `FALSE`), `ellipsis` (default `"..."`).
+Unknown keys raise a warning.}
+
+\item{highlight}{Character vector of region labels (e.g. `c("AB", "ABC")`)
+or an integer vector of region bitmasks (e.g. the output of
+[parse_region_expression()]). When set, only the listed regions keep
+their original fill colour; all other set-shapes are desaturated to
+`#cccccc` at 25\% opacity. Default `NULL` (no spotlight).}
 }
 \value{
 A `character` (length 1) with the raw SVG.

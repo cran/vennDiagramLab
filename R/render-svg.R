@@ -136,6 +136,20 @@ NULL
 #'   text is preserved.
 #' @param show_names If `FALSE`, blanks every `NameA-I` element.
 #' @param show_counts If `FALSE`, blanks every `Count_*` and `CountSUM_*` element.
+#' @param show_items If `TRUE`, replace the per-region count text with the
+#'   actual item identifiers (rendered as `<tspan>` lines inside each
+#'   `Count_*` text node). Default `FALSE`.
+#' @param item_options Named list of overrides for the item-text engine.
+#'   Recognised keys: `max_items_per_region` (default 20), `ncol_items`
+#'   (default 1), `truncate_long_names` (default 12; 0 disables),
+#'   `line_height` (default 10), `font_size` (default 8),
+#'   `show_counts_with_items` (default `FALSE`), `ellipsis` (default `"..."`).
+#'   Unknown keys raise a warning.
+#' @param highlight Character vector of region labels (e.g. `c("AB", "ABC")`)
+#'   or an integer vector of region bitmasks (e.g. the output of
+#'   [parse_region_expression()]). When set, only the listed regions keep
+#'   their original fill colour; all other set-shapes are desaturated to
+#'   `#cccccc` at 25\% opacity. Default `NULL` (no spotlight).
 #' @return A `character` (length 1) with the raw SVG.
 #' @export
 #' @examples
@@ -158,7 +172,10 @@ render_venn_svg <- function(result,
                              colors = NULL,
                              title = NULL,
                              show_names = TRUE,
-                             show_counts = TRUE) {
+                             show_counts = TRUE,
+                             show_items = FALSE,
+                             item_options = NULL,
+                             highlight = NULL) {
     model_name <- if (is.null(model)) result@model else model
 
     if (model_name == "proportional") {
@@ -202,6 +219,20 @@ render_venn_svg <- function(result,
             .replace_fill_color(root, sprintf("Shape%s",  letter), hex_color)
             .replace_fill_color(root, sprintf("Shape%s2", letter), hex_color)
         }
+    }
+
+    # Phase 11 Feature A: replace per-region counts with item-name tspans.
+    if (isTRUE(show_items)) {
+        # Clear the count text first so the new tspan content has a blank
+        # canvas to write into.
+        .apply_counts(root, result, show = FALSE)
+        .render_items_in_regions(root, result, item_options)
+    }
+
+    # Phase 11 Feature B: desaturate sets that do not appear in any
+    # highlighted region. NULL = no-op (default behaviour).
+    if (!is.null(highlight)) {
+        .apply_highlight(root, result, highlight)
     }
 
     as.character(root)

@@ -158,41 +158,98 @@ render_upset <- function(result,
     # set names (boolean), plus a Region column for grouping. Since our items
     # are dedup'd per-region (exclusive_items), we expand each intersection
     # by its size: replicate the membership row `size` times.
+    #
+    # Column-name strategy: ComplexUpset renders the matrix-row labels from the
+    # column names of the supplied data frame. We use "A -- Vogelstein"-style
+    # labels (letter + en-dash + display name) so the UpSet panel matches the
+    # Python matplotlib renderer instead of showing bare letters. The mapping
+    # from short label -> display label is also applied to bar fill colours
+    # and to the input intersection labels.
     sets <- data$sets
+    set_display_names <- result@dataset@set_names
+    set_labels <- vapply(
+        seq_along(sets),
+        function(i) sprintf("%s -- %s", sets[i], set_display_names[[i]]),
+        character(1L)
+    )
+    letter_to_label <- setNames(set_labels, sets)
+
+    # Build data frame column-wise so column names with "--" / spaces survive
+    # (`rbind.data.frame()` runs the names through `make.names()`, which would
+    # mangle them into things like "A....Vogelstein" and break the `intersect`
+    # lookup downstream).
+    n_total <- if (length(intersections) == 0L) 1L
+               else sum(vapply(intersections, function(x) x$size, integer(1L)))
+    df <- as.data.frame(
+        matrix(FALSE, nrow = n_total, ncol = length(set_labels)),
+        stringsAsFactors = FALSE
+    )
+    names(df) <- set_labels  # direct attribute set; does NOT pass through make.names
+    df$Region <- character(n_total)
+
     if (length(intersections) == 0L) {
-        # Empty case: ComplexUpset requires at least one row. Build a 1-row
-        # all-FALSE placeholder so the ggplot construction does not throw.
-        df <- as.data.frame(matrix(FALSE, nrow = 1L, ncol = length(sets),
-                                    dimnames = list(NULL, sets)))
-        df$Region <- "(empty)"
+        df$Region[1L] <- "(empty)"
     } else {
-        rows <- list()
-        for (i in seq_along(intersections)) {
-            inter <- intersections[[i]]
-            membership <- as.list(setNames(sets %in% inter$members, sets))
-            membership$Region <- inter$label
-            n_rows <- inter$size
-            for (k in seq_len(n_rows)) {
-                rows[[length(rows) + 1L]] <- membership
+        row_idx <- 1L
+        for (inter in intersections) {
+            size <- inter$size
+            end_idx <- row_idx + size - 1L
+            membership <- sets %in% inter$members
+            for (j in seq_along(set_labels)) {
+                df[row_idx:end_idx, j] <- membership[j]
             }
+            df$Region[row_idx:end_idx] <- inter$label
+            row_idx <- end_idx + 1L
         }
-        df <- do.call(rbind.data.frame, c(rows, stringsAsFactors = FALSE))
     }
 
     bar_colors <- .bar_colors(intersections, mode = color_mode, custom = colors)
     label_to_color <- setNames(bar_colors, vapply(intersections, function(x) x$label, character(1L)))
 
-    plot <- ComplexUpset::upset(
-        df,
-        intersect = sets,
-        name = "Set membership",
-        base_annotations = list(
-            "Intersection size" = ComplexUpset::intersection_size(
-                mapping = ggplot2::aes(fill = .data$Region)
-            ) + ggplot2::scale_fill_manual(values = label_to_color, guide = "none")
+    # Wrap construction in withCallingHandlers to swallow the upstream
+    # ComplexUpset 1.3.x `size` -> `linewidth` deprecation warning that fires
+    # during `intersection_size()`. The warning is upstream-only and not
+    # actionable for users of vennDiagramLab.
+    plot <- withCallingHandlers(
+        ComplexUpset::upset(
+            df,
+            intersect = set_labels,
+            name = "Set membership",
+            base_annotations = list(
+                "Intersection size" = ComplexUpset::intersection_size(
+                    mapping = ggplot2::aes(fill = .data$Region)
+                ) + ggplot2::scale_fill_manual(values = label_to_color, guide = "none")
+            ),
+            # Rotate set-size x-axis labels 45 degrees so the 5-6 default
+            # ticks don't pile up on a half-page-wide panel. Replacing the
+            # underlying scale via `+ scale_x_reverse(breaks=...)` is not
+            # honoured by ComplexUpset's internal scale builder, so this is
+            # the pragmatic alternative.
+            set_sizes = ComplexUpset::upset_set_size() +
+                ggplot2::theme(
+                    axis.text.x = ggplot2::element_text(
+                        angle = 45, hjust = 1, vjust = 1, size = 7
+                    )
+                ),
+            n_intersections = max_columns,
+            sort_intersections_by = if (sort_by == "size") "cardinality" else "degree",
+            # width_ratio: width of the set-size panel relative to the dot
+            # matrix. Default 0.3 squeezes the size axis labels into a single
+            # jumble at small page sizes; 0.25 keeps it readable while still
+            # leaving most of the canvas for the matrix.
+            width_ratio = 0.25,
+            # height_ratio: height of the intersection-size panel relative
+            # to the dot matrix. Default 0.5 leaves a tiny matrix below the
+            # giant bars on a 4-set diagram; 0.7 evens it out.
+            height_ratio = 0.7
         ),
-        n_intersections = max_columns,
-        sort_intersections_by = if (sort_by == "size") "cardinality" else "degree"
+        warning = function(w) {
+            msg <- conditionMessage(w)
+            if (grepl("Using `size` aesthetic for lines was deprecated",
+                      msg, fixed = TRUE)) {
+                invokeRestart("muffleWarning")
+            }
+        }
     )
     plot
 }

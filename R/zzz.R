@@ -1,3 +1,6 @@
+#' @importFrom methods slot
+NULL
+
 #' Get the vennDiagramLab package version
 #'
 #' Returns the installed version of vennDiagramLab as a character string.

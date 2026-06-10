@@ -126,6 +126,7 @@ test_that(".bar_colors mode 'depth' returns single color when all degrees equal"
 
 test_that("render_upset returns a ggplot for a 3-set toy dataset", {
     skip_on_cran()
+    skip_if(getRversion() < "4.6", "render_upset requires R >= 4.6 (ComplexUpset 1.3.3 + ggplot2 4 + S7 incompatible on older R)")
     ds <- methods::new("VennDataset",
         set_names = c("A", "B", "C"),
         items = list(A = c("x", "y"), B = c("y", "z"), C = c("z", "w")),
@@ -139,6 +140,7 @@ test_that("render_upset returns a ggplot for a 3-set toy dataset", {
 
 test_that("render_upset honors max_columns to cap intersection count", {
     skip_on_cran()
+    skip_if(getRversion() < "4.6", "render_upset requires R >= 4.6 (ComplexUpset 1.3.3 + ggplot2 4 + S7 incompatible on older R)")
     ds <- methods::new("VennDataset",
         set_names = c("A", "B", "C"),
         items = list(A = c("x", "y", "z"), B = c("y", "z", "w"), C = c("z", "w", "v")),
@@ -153,6 +155,7 @@ test_that("render_upset honors max_columns to cap intersection count", {
 
 test_that("render_upset honors threshold to filter small intersections", {
     skip_on_cran()
+    skip_if(getRversion() < "4.6", "render_upset requires R >= 4.6 (ComplexUpset 1.3.3 + ggplot2 4 + S7 incompatible on older R)")
     ds <- methods::new("VennDataset",
         set_names = c("A", "B"),
         items = list(A = c("g1", "g2"), B = c("g2", "g3")),
@@ -167,6 +170,7 @@ test_that("render_upset honors threshold to filter small intersections", {
 
 test_that("render_upset works on bundled cancer drivers sample", {
     skip_on_cran()
+    skip_if(getRversion() < "4.6", "render_upset requires R >= 4.6 (ComplexUpset 1.3.3 + ggplot2 4 + S7 incompatible on older R)")
     skip_if_not(file.exists(system.file("extdata", "samples",
                                           "dataset_real_cancer_drivers_4.tsv",
                                           package = "vennDiagramLab")),

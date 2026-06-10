@@ -1,5 +1,123 @@
 # vennDiagramLab — NEWS
 
+## v2.4.2 — 2026-06-10 — CRAN checktime fix (faster delimited-file loader)
+
+Maintenance release addressing the CRAN incoming-pretest checktime NOTE
+(`Overall checktime > 10 min` on r-devel-windows). No API, output, or
+dependency changes — every public function behaves byte-identically.
+
+* **`load_csv()` / `load_tsv()` are now ~10x faster on large files.** The
+  internal delimited-file parser (`.split_line`, `.binary_columns_to_dataset`,
+  `.aggregated_columns_to_dataset`) was quadratic in the number of rows
+  because it grew result vectors one element at a time and trimmed cells
+  character-by-character. It is now vectorised: unquoted lines split with a
+  single `strsplit()`, and membership / trim / lower-case run over a
+  character matrix. Loading the bundled 20,000-row
+  `dataset_real_cancer_drivers_4` sample dropped from ~6.5s to ~0.5s.
+  Parsing results (item sets, item order, universe size, error conditions)
+  are unchanged — verified by the byte-parity fixtures and the
+  `.split_line` / converter unit tests.
+* `skip_on_cran()` added to the remaining heavy PDF-rendering integration
+  tests (`to_pdf_report` share / cluster pages, `to_zip_report`) so the
+  on-CRAN test pass stays light; these still run on CI and under
+  `devtools::check()`.
+
+## v2.4.1 — 2026-06-10 — Cross-package version sync (no functional R changes)
+
+Version-only release: bumps `vennDiagramLab` from 2.2.3 to 2.4.1 to keep the
+R, Python, and web-tool version lines in lockstep with the Python companion
+`venn-diagram-lab` 2.4.1 on PyPI and the web tool. No new exports, no API or
+behaviour changes, and no new dependencies relative to 2.2.3 — the test suite,
+vignettes, and documentation are unchanged apart from the version string.
+
+## v2.2.3 — 2026-06-03 — Render + PDF + bundle parity, Phase 11 item / highlight / DSL surface
+
+Cross-package patch release matching webtool v2.2.3 and Python v2.2.3,
+delivered in two additive phases (10 + 11). No breaking changes, no
+removed APIs.
+
+### Phase 10 — Render + PDF + bundle parity
+
+New rendering and export APIs that bring the R surface in line with the
+webtool and the Python package:
+
+* `render_enrichment_bar(result, metric, width, height)`: pairwise
+  enrichment bar chart SVG. Bar height encodes -log10(BH-FDR) or
+  Fold Enrichment, with green / grey colouring at FDR < 0.05 and
+  significance markers `***`/`**`/`*` above each bar.
+* `render_enrichment_lollipop(result, metric, width, height)`: same
+  data as `render_enrichment_bar()` rendered as a stem-and-dot plot,
+  with dot radius scaling by `sqrt(intersection / max_intersection)`.
+* `to_excel_workbook(result, path)`: 3-sheet xlsx (Jaccard, Sørensen-Dice,
+  Enrichment) matching the webtool's ZIP-bundle statistics file.
+  Pure-R (uses `openxlsx`).
+* `to_zip_report(result, path, include_share, include_cluster)`: bundles
+  PDF + 4 SVGs + 3 TSVs + xlsx + README.txt into a single ZIP archive.
+  Pure-R (uses `zip`).
+* `to_pdf_report()` gains `include_share = TRUE` (Item Share Distribution
+  page, on by default) and `include_cluster = FALSE` (Cluster Heatmap
+  page, opt-in) flags.
+
+### Phase 11 — Item display, Highlight, Region accessors, Boolean DSL
+
+Six new public APIs (two `render_venn_svg()` parameters plus four
+exported functions) for inspecting and presenting individual regions.
+
+* `render_venn_svg(result, show_items = TRUE, item_options = list(...))`:
+  replaces the per-region count text with the actual item identifiers,
+  optionally column-paginated, optionally truncated. `item_options`
+  recognises `max_items_per_region`, `ncol_items`, `truncate_long_names`,
+  `line_height`, `font_size`, `show_counts_with_items`, `ellipsis`.
+* `render_venn_svg(result, highlight = ...)`: spotlight mode. Accepts a
+  character vector of region labels (`"AB"`, `"ABC"`, ...) OR an integer
+  vector of region bitmasks. Sets that do not contribute to any
+  highlighted region get desaturated to `#cccccc` at 25% opacity.
+* `intersection_items(result, sets)`: items appearing in every set in
+  `sets`, regardless of other memberships.
+* `exclusive_items(result, sets)`: items in EXACTLY this combination
+  (not in any other set in the dataset).
+* `union_items(result, sets)`: items in any of the named sets.
+* `parse_region_expression(expr, n_sets)`: Boolean DSL parser. Grammar:
+  `&` intersection, `|`/`+` union, `~`/`!` complement, parentheses
+  for grouping, atoms `A..I`. Returns a sorted integer vector of
+  region bitmasks suitable for `highlight = ...`.
+
+The four new public functions chain naturally with the existing
+renderers:
+
+```r
+masks <- parse_region_expression("A & B + B & C", n_sets = 4L)
+img   <- render_venn_svg(result, highlight = masks, show_items = TRUE)
+items <- exclusive_items(result, c("A", "B"))
+```
+
+### Dependencies
+
+* `openxlsx` and `zip` added to `Imports` (both pure-R). No new
+  dependencies in Phase 11.
+
+## v2.2.2 — 2026-05-31 — Item-share distribution + cluster heatmap (cross-package parity)
+
+Additive feature release matching the webtool v2.2.2 and Python v2.2.2 releases. No breaking changes, no removed APIs, no new hard dependencies.
+
+### New features
+
+* `item_share_distribution(matrix)`: per-membership-count item totals.
+* `cluster_set_order(D, linkage)`: UPGMA / complete / single linkage on a
+  symmetric distance matrix, with `leaf_order` and `merges` matching the
+  cross-package convention (smaller-min-leaf on the left).
+* `render_share_distribution(dataset)`: histogram SVG, 480×280 viewBox.
+* `render_cluster_heatmap(result, linkage, ...)`: 1 − Jaccard reordered
+  heatmap with row and column dendrogram overlays.
+* Mirrors webtool v2.2.2 and Python v2.2.2 (cross-package parity tests
+  cover all four exports).
+
+### Internal
+
+* New S4 class `SvgImage` (`content`, `width`, `height` slots) returned
+  by the two new plot renderers. `render_venn_svg()` continues to return
+  a plain `character` for backwards compatibility with the v2.0.x API.
+
 ## v2.0.5 — 2026-05-12 — Fix inst/CITATION pre-install crash + finish vignette skip
 
 Patch release addressing two issues from the CRAN auto-check on v2.0.4.

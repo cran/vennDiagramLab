@@ -1,7 +1,8 @@
 Package: vennDiagramLab
 Type: Package
 Title: Headless Venn Diagram Analysis and Rendering
-Version: 2.0.5
+Version: 2.4.2
+Date: 2026-06-10
 Authors@R: c(
     person("Zoltán", "Dul", email = "zoltan.dul@gmail.com",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9523-3450")),
@@ -29,17 +30,26 @@ BugReports: https://github.com/ZoliQua/Venn-Diagram-Lab/issues
 Depends: R (>= 4.2)
 Imports: methods, stats, utils, jsonlite, xml2, ggplot2, ComplexUpset,
         ggraph, tidygraph, grDevices, rsvg, patchwork, gridExtra,
-        BiocGenerics
+        openxlsx, zip, BiocGenerics
 Suggests: testthat (>= 3.0.0), knitr, rmarkdown, rprojroot, pdftools,
-        broom, tibble, dplyr, covr, BiocCheck, lintr, pkgdown
+        svglite, broom, tibble, dplyr, covr, BiocCheck, lintr, pkgdown
 VignetteBuilder: knitr
 biocViews: Visualization, GeneSetEnrichment, Software
 Encoding: UTF-8
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 8.0.0
+Collate: 'classes.R' 'errors.R' 'analysis.R' 'broom-tidy.R' 'cluster.R'
+        'enrichment-plot-helpers.R' 'excel-workbook.R' 'ggplot-layer.R'
+        'io.R' 'proportional.R' 'region-accessors.R'
+        'region-expression.R' 'render-enrichment-bar.R'
+        'render-enrichment-lollipop.R' 'render-network.R'
+        'render-pdf.R' 'render-share-distribution.R'
+        'render-svg-items.R' 'render-svg.R' 'render-upset.R'
+        'samples.R' 'share-distribution.R' 'statistics.R'
+        'tsv-export.R' 'zip-report.R' 'zzz.R'
 NeedsCompilation: no
-Packaged: 2026-05-12 19:27:29 UTC; Zoli
+Packaged: 2026-06-10 15:24:38 UTC; Zoli
 Author: Zoltán Dul [aut, cre] (ORCID: <https://orcid.org/0000-0002-9523-3450>),
   Márton Ölbei [aut] (ORCID: <https://orcid.org/0000-0002-4903-6237>),
   N. Shaun B. Thomas [aut],
@@ -49,4 +59,4 @@ Author: Zoltán Dul [aut, cre] (ORCID: <https://orcid.org/0000-0002-9523-3450>),
     <https://orcid.org/0000-0002-2919-5601>)
 Maintainer: Zoltán Dul <zoltan.dul@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-05-18 18:10:02 UTC
+Date/Publication: 2026-06-10 16:40:08 UTC

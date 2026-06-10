@@ -9,7 +9,9 @@ to_pdf_report(
   path,
   title = NULL,
   include_network = TRUE,
-  include_about = TRUE
+  include_about = TRUE,
+  include_share = TRUE,
+  include_cluster = FALSE
 )
 }
 \arguments{
@@ -22,6 +24,12 @@ to_pdf_report(
 \item{include_network}{If `TRUE` (default), include the network page.}
 
 \item{include_about}{If `TRUE` (default), include the methodology page.}
+
+\item{include_share}{If `TRUE` (default), include the Item Share
+Distribution page.}
+
+\item{include_cluster}{If `TRUE`, include the Cluster Heatmap page
+(default `FALSE` — opt-in like Python's `cluster_heatmap=True`).}
 }
 \value{
 Invisibly returns `NULL`. The PDF is written to `path`.

@@ -16,6 +16,21 @@ NULL
 
 #' @noRd
 .split_line <- function(line, delimiter) {
+    # Fast path: lines with no double-quote need no stateful quote tracking,
+    # so a single vectorised strsplit + trimws reproduces the char-by-char
+    # parser below exactly. strsplit() drops trailing empty fields, whereas
+    # the reference parser always emits one field per (unquoted) delimiter
+    # plus one, so we re-pad to (#delimiters + 1) before trimming.
+    if (!grepl('"', line, fixed = TRUE)) {
+        n_delim <- nchar(line) - nchar(gsub(delimiter, "", line, fixed = TRUE))
+        parts <- strsplit(line, delimiter, fixed = TRUE)[[1L]]
+        expected <- n_delim + 1L
+        if (length(parts) < expected)
+            parts <- c(parts, rep("", expected - length(parts)))
+        return(trimws(parts))
+    }
+
+    # Slow path: quoted fields may contain the delimiter or escaped quotes.
     result <- character()
     current <- character()
     in_quotes <- FALSE
@@ -42,6 +57,23 @@ NULL
     }
     result <- c(result, trimws(paste(current, collapse = "")))
     result
+}
+
+#' Pad/truncate each parsed row to a fixed column count, as a character matrix.
+#'
+#' Mirrors the reference loop's `if (col_idx <= length(row)) row[col_idx] else ""`
+#' rule: short rows are right-padded with "", long rows are truncated. Row order
+#' is preserved so first-appearance ordering downstream stays byte-identical.
+#' @noRd
+.rows_to_matrix <- function(rows, ncol) {
+    n <- length(rows)
+    mat <- matrix("", nrow = n, ncol = ncol)
+    for (i in seq_len(n)) {
+        r <- rows[[i]]
+        m <- min(length(r), ncol)
+        if (m > 0L) mat[i, seq_len(m)] <- r[seq_len(m)]
+    }
+    mat
 }
 
 #' @noRd
@@ -108,36 +140,46 @@ NULL
         )
 
     set_names <- headers[(prefix_cols + 1L):length(headers)]
-    items <- setNames(replicate(length(set_names), character(0), simplify = FALSE), set_names)
-    item_order_seen <- character()
-    nonempty_row_count <- 0L
+    n_sets <- length(set_names)
+    n_cols <- length(headers)
 
-    for (row_idx in seq_along(rows)) {
-        row <- rows[[row_idx]]
-        if (length(row) == 0L || !nzchar(trimws(row[1L]))) next
-        nonempty_row_count <- nonempty_row_count + 1L
-        item_id <- trimws(row[1L])
-        if (!item_id %in% item_order_seen)
-            item_order_seen <- c(item_order_seen, item_id)
-        for (col_offset in seq_along(set_names)) {
-            set_name <- set_names[col_offset]
-            col_idx <- prefix_cols + col_offset
-            cell <- if (col_idx <= length(row)) tolower(trimws(row[col_idx])) else ""
-            if (cell %in% .TRUTHY) {
-                items[[set_name]] <- c(items[[set_name]], item_id)
-            } else if (cell %in% .FALSY) {
-                next
-            } else {
-                raw <- if (col_idx <= length(row)) row[col_idx] else ""
-                .stop_invalid_dataset(
-                    sprintf("Column '%s' row %d has invalid value '%s' (expected 0/1/true/false/yes/no)",
-                            set_name, row_idx + 1L, raw)
-                )
-            }
-        }
+    # Vectorised reimplementation of the original row-major loop. The cells are
+    # already trimmed by .split_line; building a character matrix lets us trim,
+    # lower-case and membership-test every cell with a handful of C-level calls
+    # instead of growing vectors row by row (which was quadratic on large files).
+    mat <- .rows_to_matrix(rows, n_cols)
+    item_ids <- trimws(mat[, 1L])
+    valid_idx <- which(nzchar(item_ids))
+    nonempty_row_count <- length(valid_idx)
+    item_order_seen <- unique(item_ids[valid_idx])
+
+    set_cells <- mat[, (prefix_cols + 1L):n_cols, drop = FALSE]
+    lc <- set_cells
+    lc[] <- tolower(trimws(set_cells))           # preserves matrix dims
+    vcells <- lc[valid_idx, , drop = FALSE]      # valid rows x sets
+
+    truthy_mat <- matrix(vcells %in% .TRUTHY, nrow = nonempty_row_count)
+    falsy_mat  <- matrix(vcells %in% .FALSY,  nrow = nonempty_row_count)
+    bad_mat <- !(truthy_mat | falsy_mat)
+    if (any(bad_mat)) {
+        # Reconstruct the first invalid cell in the original row-major
+        # (row-outer, set-inner) scan order to preserve the error message.
+        flat <- which(t(bad_mat))[1L]            # t() => scan sets within a row
+        set_index <- ((flat - 1L) %% n_sets) + 1L
+        vr_index  <- ((flat - 1L) %/% n_sets) + 1L
+        orig_row  <- valid_idx[vr_index]
+        raw <- set_cells[orig_row, set_index]
+        .stop_invalid_dataset(
+            sprintf("Column '%s' row %d has invalid value '%s' (expected 0/1/true/false/yes/no)",
+                    set_names[set_index], orig_row + 1L, raw)
+        )
     }
-    # Dedupe per-set after collection.
-    items <- lapply(items, unique)
+
+    valid_ids <- item_ids[valid_idx]
+    items <- setNames(
+        lapply(seq_len(n_sets), function(j) unique(valid_ids[truthy_mat[, j]])),
+        set_names
+    )
 
     methods::new("VennDataset",
         set_names     = set_names,
@@ -157,19 +199,23 @@ NULL
         )
 
     set_names <- headers
-    items <- setNames(replicate(length(set_names), character(0), simplify = FALSE), set_names)
-    seen <- character()
+    n_sets <- length(set_names)
 
-    for (row in rows) {
-        for (col_idx in seq_along(set_names)) {
-            cell <- if (col_idx <= length(row)) trimws(row[col_idx]) else ""
-            if (nzchar(cell)) {
-                items[[set_names[col_idx]]] <- c(items[[set_names[col_idx]]], cell)
-                if (!cell %in% seen) seen <- c(seen, cell)
-            }
-        }
-    }
-    items <- lapply(items, unique)
+    # Vectorised counterpart of the original nested loop (see
+    # .binary_columns_to_dataset for the same matrix strategy). Per-set items
+    # keep row order then dedupe; `seen` is the first-appearance order across a
+    # row-major (row-outer, column-inner) traversal of the non-empty cells.
+    mat <- .rows_to_matrix(rows, n_sets)
+    mat[] <- trimws(mat)
+    items <- setNames(
+        lapply(seq_len(n_sets), function(j) {
+            col <- mat[, j]
+            unique(col[nzchar(col)])
+        }),
+        set_names
+    )
+    row_major <- as.vector(t(mat))
+    seen <- unique(row_major[nzchar(row_major)])
 
     if (!any(vapply(items, length, integer(1L)) > 0L))
         .stop_invalid_dataset("Aggregated file has no non-empty cells")
