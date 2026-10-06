@@ -18,11 +18,13 @@
 * **Area-proportional 2- and 3-set layouts** via analytical (`solve_2set`) and approximate (`solve_3set`) solvers.
 * **UpSet plots** via [`ComplexUpset`](https://github.com/krassowski/complex-upset) with sort-by-size / sort-by-degree, depth / heatmap / custom color modes, and threshold cutoffs.
 * **Force-directed network views** via [`ggraph`](https://ggraph.data-imaginist.com/) + [`tidygraph`](https://tidygraph.data-imaginist.com/), with configurable edge metric (intersection / Jaccard / fold enrichment / overlap coefficient) and significance coloring.
-* **Five pairwise statistical metrics** (Jaccard, Dice, overlap coefficient, fold enrichment, hypergeometric over-representation) with BH-FDR adjustment.
+* **Five pairwise statistical metrics** (Jaccard, Dice, overlap coefficient, fold enrichment, hypergeometric over-representation) with BH-FDR adjustment, **Bonferroni** FWER control, the **two-sided Fisher's exact p-value**, and analytic Wilson **95% confidence intervals** for Jaccard and Dice.
 * **Multi-page PDF reports** combining overview, Venn + UpSet, statistics tables, network, and methodology pages in a single US-Letter-landscape document.
 * **`ggplot2` layer** (`geom_venn()`) and **`broom`-compatible S3 methods** (`tidy()` / `glance()` / `augment()`) for tidyverse + `targets` / `drake` pipeline integration.
-* **Byte-equivalent TSV exports** tested against the React webapp's golden fixtures — the same region-summary, item-matrix, and statistics files the web tool's "Export" buttons emit.
-* **Cross-implementation parity** verified by 12 byte-equivalence tests against the Python package's golden fixtures (4 sample datasets × 3 export types).
+* **Byte-equivalent TSV/JSON exports** tested against the React webapp's golden fixtures — region-summary, item-matrix, statistics, one-vs-rest enrichment (`to_one_vs_rest_tsv()`), and the full result as JSON (`to_result_json()`), matching the web tool's "Export" buttons.
+* **Cytoscape network export** (`to_network_graphml()` / `to_network_sif()`) — the set-relationship network as GraphML or SIF, byte-identical to the web tool's Network-view export buttons and the npm/Python exporters.
+* **Data-quality warnings** (`analyze_data_quality()` / `validate_dataset()`) — non-destructive detection of duplicate items, empty cells, and case-only collisions in imported tables; item identity is never changed.
+* **Cross-implementation parity** verified by byte-equivalence tests against the Python package's golden fixtures.
 
 ## 2. Install
 
@@ -154,6 +156,59 @@ img   <- render_venn_svg(result, highlight = masks, show_items = TRUE)
 items <- exclusive_items(result, c("A", "B"))
 ```
 
+### 6.3. Statistics + export additions (unreleased)
+
+- `to_statistics_tsv(result, path)` gains four columns: `Bonferroni` (FWER-adjusted
+  p-value, `min(1, p * m)`, alongside the existing Benjamini-Hochberg `FDR`),
+  `P_two_sided` (the two-sided Fisher's exact p-value for the same pair — note the
+  existing `P_value` column is the **one-sided** over-representation test), and
+  `Jaccard_CI_low/high` + `Dice_CI_low/high` (analytic Wilson 95% confidence intervals).
+- `to_one_vs_rest_tsv(result, path)` — new TSV export: tests each set against the union
+  of all other sets. Columns: `Set, Name, Size, Rest_Size, Intersection, Expected,
+  Fold_Enrichment, P_value, FDR, Bonferroni, Significant`.
+- `to_result_json(result, path)` — new JSON export: the full region + statistics result
+  (model, set names, universe size, every non-empty region, set sizes, and the pairwise
+  statistics array with `bonferroni` / `pTwoSided`) as a single canonical JSON document,
+  byte-equivalent to the web tool's "Full Result (JSON)" export and Python's
+  `RegionResult.to_json()`.
+
+These are additions to the **TSV/JSON export layer** — the PDF report's statistics
+tables (`to_pdf_report()`) are unchanged.
+
+```r
+to_statistics_tsv(result, "statistics.tsv")
+to_one_vs_rest_tsv(result, "one_vs_rest.tsv")
+to_result_json(result, "result.json")
+```
+
+### 6.4. Cytoscape network export + data-quality warnings (unreleased)
+
+- `to_network_graphml(result, path)` — writes the force-directed set-relationship
+  network (nodes = sets, edges = every pairwise overlap) as Cytoscape-compatible
+  GraphML XML, byte-identical to the web tool's Network-view "Export GraphML" button,
+  npm's `toNetworkGraphml()`, and Python's `to_network_graphml()`.
+- `to_network_sif(result, path)` — writes the same network as Cytoscape SIF (one
+  `<source>\toverlap\t<target>` line per edge, isolated nodes as lone id lines),
+  matching the web tool's "Export SIF" button and the npm/Python SIF exporters
+  byte-for-byte.
+- `analyze_data_quality(headers, rows, mode = c("binary", "aggregated"), prefix_cols = 1L)`
+  — pure, read-only scan for duplicate items, empty/whitespace cells, and case-only
+  collisions (e.g. `TP53` vs `tp53`) in a parsed table. Never mutates the input and
+  never folds item case; case collisions are reported, not merged.
+- `validate_dataset(path, mode = c("binary", "aggregated"), delimiter = NULL, prefix_cols = 1L, warn = TRUE)`
+  — convenience wrapper that loads a file the same way `load_csv()`/`load_tsv()` do,
+  runs `analyze_data_quality()` over it, and (by default) emits a single `warning()`
+  summarizing any findings. `load_csv()`/`load_tsv()` themselves remain unchanged and
+  never warn.
+
+```r
+to_network_graphml(result, "network.graphml")
+to_network_sif(result, "network.sif")
+
+report <- validate_dataset("genes.csv", mode = "binary")
+report$has_warnings
+```
+
 ## 7. Documentation
 
 * Full reference site + vignettes: <https://zoliqua.github.io/Venn-Diagram-Lab/r/>
@@ -169,10 +224,11 @@ items <- exclusive_items(result, c("A", "B"))
 
 ## 8. Related projects
 
-`vennDiagramLab` is one of three coordinated implementations sharing the same SVG model library, statistics, and byte-equivalent TSV outputs:
+`vennDiagramLab` is one of four coordinated implementations sharing the same SVG model library, statistics, and byte-equivalent TSV outputs:
 
 * **Web tool** — interactive viewer, editor, and visual analysis: <https://www.venndiagramlab.org/>
 * **Python package** (`venn-diagram-lab` on PyPI): <https://pypi.org/project/venn-diagram-lab/>
+* **Node.js package** (`venn-diagram-lab` on npm): <https://www.npmjs.com/package/venn-diagram-lab>
 * **R package** (this package — `vennDiagramLab` on CRAN + Bioconductor)
 
 ### 9. Source repositories

@@ -217,12 +217,16 @@ setMethod("to_matrix_tsv", "RegionResult", function(result, path) {
 #' Python's `RegionResult.to_statistics_tsv()` byte-for-byte.
 #'
 #' Columns: Set_A, Set_B, Name_A, Name_B, Size_A, Size_B, Intersection, Union,
-#' Jaccard, Overlap_Coeff, Dice, Expected, Fold_Enrichment, P_value, FDR, Significant.
+#' Jaccard, Overlap_Coeff, Dice, Expected, Fold_Enrichment, P_value, FDR,
+#' Bonferroni, P_two_sided, Jaccard_CI_low, Jaccard_CI_high, Dice_CI_low,
+#' Dice_CI_high, FE_CI_low, FE_CI_high, Significant.
 #' Float formatting:
 #' * Jaccard / Overlap_Coeff / Dice: 4 decimals via [.js_to_fixed()]
 #' * Expected: 2 decimals
 #' * Fold_Enrichment: 3 decimals
-#' * P_value / FDR: scientific (JS toExponential(2)) if `< 0.001`, else 6 decimals
+#' * P_value / FDR / Bonferroni / P_two_sided: scientific (JS toExponential(2))
+#'   if `< 0.001`, else 6 decimals
+#' * Jaccard_CI_low/high, Dice_CI_low/high, FE_CI_low/high: 4 decimals
 #' * Significant: one of `"***"`, `"**"`, `"*"`, `"ns"` keyed off FDR thresholds
 #'   (0.001, 0.01, 0.05).
 #'
@@ -252,7 +256,11 @@ setMethod("to_statistics_tsv", "RegionResult", function(result, path) {
     stats_header <- paste(c(
         "Set_A", "Set_B", "Name_A", "Name_B", "Size_A", "Size_B",
         "Intersection", "Union", "Jaccard", "Overlap_Coeff", "Dice",
-        "Expected", "Fold_Enrichment", "P_value", "FDR", "Significant"
+        "Expected", "Fold_Enrichment", "P_value", "FDR",
+        "Bonferroni", "P_two_sided",
+        "Jaccard_CI_low", "Jaccard_CI_high", "Dice_CI_low", "Dice_CI_high",
+        "FE_CI_low", "FE_CI_high",
+        "Significant"
     ), collapse = "\t")
 
     n <- length(result@dataset@set_names)
@@ -289,6 +297,14 @@ setMethod("to_statistics_tsv", "RegionResult", function(result, path) {
         fe <- fold_enrichment(universe, size_a, size_b, inter)
         p_val <- as.numeric(row$p_value)
         fdr <- as.numeric(row$p_adjusted)
+        bonferroni <- as.numeric(row$p_bonferroni)
+        p_two_sided <- as.numeric(row$p_two_sided)
+        jaccard_ci_low <- as.numeric(row$jaccard_ci_low)
+        jaccard_ci_high <- as.numeric(row$jaccard_ci_high)
+        dice_ci_low <- as.numeric(row$dice_ci_low)
+        dice_ci_high <- as.numeric(row$dice_ci_high)
+        fe_ci_low <- as.numeric(row$fe_ci_low)
+        fe_ci_high <- as.numeric(row$fe_ci_high)
 
         sig_label <- if (fdr < 0.001) "***"
                      else if (fdr < 0.01) "**"
@@ -301,7 +317,12 @@ setMethod("to_statistics_tsv", "RegionResult", function(result, path) {
             as.character(inter), as.character(union_size),
             .js_to_fixed(jac, 4), .js_to_fixed(oc, 4), .js_to_fixed(dic, 4),
             .js_to_fixed(expected, 2), .js_to_fixed(fe, 3),
-            fmt_p(p_val), fmt_p(fdr), sig_label,
+            fmt_p(p_val), fmt_p(fdr),
+            fmt_p(bonferroni), fmt_p(p_two_sided),
+            .js_to_fixed(jaccard_ci_low, 4), .js_to_fixed(jaccard_ci_high, 4),
+            .js_to_fixed(dice_ci_low, 4), .js_to_fixed(dice_ci_high, 4),
+            .js_to_fixed(fe_ci_low, 4), .js_to_fixed(fe_ci_high, 4),
+            sig_label,
             sep = "\t"
         ))
     }
@@ -332,3 +353,119 @@ setMethod("to_statistics_tsv", "RegionResult", function(result, path) {
     sign_exp <- if (exp >= 0) "+" else "-"
     sprintf("%s%se%s%d", sign, mantissa_str, sign_exp, abs(exp))
 }
+
+#' Write the one-vs-rest Enrichment TSV
+#'
+#' Mirrors the React webapp's "Enrichment: one-vs-rest (TSV)" export button +
+#' Python's `RegionResult.to_one_vs_rest_tsv()` byte-for-byte.
+#'
+#' Each set S is tested against the union of all OTHER sets. `Rest_Size` is
+#' derived from `U` (the union of ALL sets = sum of exclusive counts over
+#' every non-empty region), NOT from [effective_universe()] (`N`) -- see
+#' [one_vs_rest_enrichment()] for the full derivation. Float formatting
+#' mirrors [to_statistics_tsv()] byte-for-byte:
+#'
+#' Columns: Set, Name, Size, Rest_Size, Intersection, Expected,
+#' Fold_Enrichment, P_value, FDR, Bonferroni, Significant.
+#' * Expected: 2 decimals
+#' * Fold_Enrichment: 3 decimals
+#' * P_value / FDR / Bonferroni: scientific (JS toExponential(2)) if `< 0.001`,
+#'   else 6 decimals
+#' * Significant: one of `"***"`, `"**"`, `"*"`, `"ns"` keyed off FDR
+#'   thresholds (0.001, 0.01, 0.05).
+#'
+#' Rows are sorted by P_value ascending (matches the underlying
+#' [one_vs_rest_enrichment()] table).
+#'
+#' @param result A [`RegionResult-class`].
+#' @param path Destination file path.
+#' @return Invisibly returns `path`.
+#' @export
+#' @examples
+#' ds <- methods::new("VennDataset",
+#'     set_names = c("A", "B"),
+#'     items = list(A = c("x", "y"), B = c("y", "z")),
+#'     item_order = c("x", "y", "z"),
+#'     universe_size = 10L, source_path = NULL, format = "csv")
+#' result <- analyze(ds)
+#' to_one_vs_rest_tsv(result, tempfile(fileext = ".tsv"))
+#' \donttest{
+#' result <- analyze(load_sample("dataset_real_cancer_drivers_4"))
+#' to_one_vs_rest_tsv(result, tempfile(fileext = ".tsv"))
+#' }
+setGeneric("to_one_vs_rest_tsv",
+    function(result, path) standardGeneric("to_one_vs_rest_tsv"))
+
+#' @rdname to_one_vs_rest_tsv
+setMethod("to_one_vs_rest_tsv", "RegionResult", function(result, path) {
+    ovr_header <- paste(c(
+        "Set", "Name", "Size", "Rest_Size", "Intersection", "Expected",
+        "Fold_Enrichment", "P_value", "FDR", "Bonferroni", "Significant"
+    ), collapse = "\t")
+
+    n <- length(result@dataset@set_names)
+    if (n < .MIN_SETS_FOR_STATISTICS) {
+        .write_bytes(ovr_header, path)
+        return(invisible(path))
+    }
+
+    letters_chars <- strsplit(.LETTERS_VDL, "", fixed = TRUE)[[1L]][seq_len(n)]
+    set_names <- result@dataset@set_names
+
+    # U = union of ALL sets = sum of exclusive counts across every region.
+    union_size <- sum(vapply(result@regions, function(r) length(r@exclusive_items), integer(1L)))
+    universe <- effective_universe(result)
+
+    exclusive_only_by_name <- stats::setNames(integer(n), set_names)
+    for (i in seq_len(n)) {
+        mask <- bitwShiftL(1L, i - 1L)
+        region <- result@regions[[as.character(mask)]]
+        exclusive_only_by_name[[set_names[i]]] <- if (is.null(region)) 0L else length(region@exclusive_items)
+    }
+
+    table <- one_vs_rest_enrichment(
+        set_names            = set_names,
+        inclusive_sizes      = result@set_sizes,
+        exclusive_only_sizes = exclusive_only_by_name,
+        union_size           = union_size,
+        universe_size        = universe
+    )
+
+    fmt_p <- function(x) {
+        if (x < 0.001) .js_to_exponential_2(x) else .js_to_fixed(x, 6)
+    }
+
+    out_lines <- character()
+    out_lines[1L] <- ovr_header
+
+    for (i in seq_len(nrow(table))) {
+        row <- table[i, , drop = FALSE]
+        name <- row$name
+        letter <- letters_chars[match(name, set_names)]
+        size <- as.integer(row$size)
+        rest_size <- as.integer(row$rest_size)
+        inter <- as.integer(row$intersection)
+        expected <- as.numeric(row$expected)
+        fe <- as.numeric(row$fold_enrichment)
+        p_val <- as.numeric(row$p_value)
+        fdr <- as.numeric(row$p_adjusted)
+        bonferroni <- as.numeric(row$p_bonferroni)
+
+        sig_label <- if (fdr < 0.001) "***"
+                     else if (fdr < 0.01) "**"
+                     else if (fdr < 0.05) "*"
+                     else "ns"
+
+        out_lines <- c(out_lines, paste(
+            letter, name, as.character(size), as.character(rest_size), as.character(inter),
+            .js_to_fixed(expected, 2), .js_to_fixed(fe, 3),
+            fmt_p(p_val), fmt_p(fdr), fmt_p(bonferroni),
+            sig_label,
+            sep = "\t"
+        ))
+    }
+
+    out <- paste(out_lines, collapse = "\n")
+    .write_bytes(out, path)
+    invisible(path)
+})

@@ -1,8 +1,8 @@
 Package: vennDiagramLab
 Type: Package
 Title: Headless Venn Diagram Analysis and Rendering
-Version: 2.4.2
-Date: 2026-06-10
+Version: 2.9.0
+Date: 2026-10-05
 Authors@R: c(
     person("Zoltán", "Dul", email = "zoltan.dul@gmail.com",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0002-9523-3450")),
@@ -40,16 +40,16 @@ Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 8.0.0
 Collate: 'classes.R' 'errors.R' 'analysis.R' 'broom-tidy.R' 'cluster.R'
-        'enrichment-plot-helpers.R' 'excel-workbook.R' 'ggplot-layer.R'
-        'io.R' 'proportional.R' 'region-accessors.R'
-        'region-expression.R' 'render-enrichment-bar.R'
-        'render-enrichment-lollipop.R' 'render-network.R'
-        'render-pdf.R' 'render-share-distribution.R'
+        'data-quality.R' 'enrichment-plot-helpers.R' 'excel-workbook.R'
+        'ggplot-layer.R' 'io.R' 'json-export.R' 'network-export.R'
+        'proportional.R' 'region-accessors.R' 'region-expression.R'
+        'render-enrichment-bar.R' 'render-enrichment-lollipop.R'
+        'render-network.R' 'render-pdf.R' 'render-share-distribution.R'
         'render-svg-items.R' 'render-svg.R' 'render-upset.R'
         'samples.R' 'share-distribution.R' 'statistics.R'
         'tsv-export.R' 'zip-report.R' 'zzz.R'
 NeedsCompilation: no
-Packaged: 2026-06-10 15:24:38 UTC; Zoli
+Packaged: 2026-10-06 08:00:02 UTC; Zoli
 Author: Zoltán Dul [aut, cre] (ORCID: <https://orcid.org/0000-0002-9523-3450>),
   Márton Ölbei [aut] (ORCID: <https://orcid.org/0000-0002-4903-6237>),
   N. Shaun B. Thomas [aut],
@@ -59,4 +59,4 @@ Author: Zoltán Dul [aut, cre] (ORCID: <https://orcid.org/0000-0002-9523-3450>),
     <https://orcid.org/0000-0002-2919-5601>)
 Maintainer: Zoltán Dul <zoltan.dul@gmail.com>
 Repository: CRAN
-Date/Publication: 2026-06-10 16:40:08 UTC
+Date/Publication: 2026-10-06 08:30:02 UTC

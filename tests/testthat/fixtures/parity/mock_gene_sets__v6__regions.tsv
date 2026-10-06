@@ -1,0 +1,64 @@
+Region	Sets	Depth	Exclusive_Count	Inclusive_Count	Exclusive_Pct	Items
+A	Pathway_A	1	24	97	13.33	ARID1B;ASXL1;CBX4;DNMT1;DNMT3A;DNMT3B;DP1;E2F1;E2F4;EED;EZH2;JARID2;KDM5A;KDM6B;KMT2B;KMT2C;SKP2;SMARCA4;SMARCB1;SMARCC1;SP1;SUZ12;TET1;TET2
+B	Pathway_B	1	16	89	8.89	BAP1;CTCF;E2F2;EP300;IDH1;IDH2;KDM1A;KDM6A;KMT2A;PHC1;RBL1;RBL2;RING1;RNF2;TET3;TFDP1
+C	Pathway_C	1	14	87	7.78	ARID1A;BCOR;BMI1;CBX2;CBX7;CREBBP;E2F3;KDM5C;KMT2D;NSD1;NSD2;PHF8;SETD2;YY1
+D	Pathway_D	1	0	73	0.00	
+E	Pathway_E	1	0	73	0.00	
+F	Pathway_F	1	0	73	0.00	
+AB	Pathway_A ∩ Pathway_B	2	2	42	1.11	GINS1;GINS2
+AC	Pathway_A ∩ Pathway_C	2	2	42	1.11	GINS3;GINS4
+AD	Pathway_A ∩ Pathway_D	2	2	42	1.11	MCM10;SLD5
+AE	Pathway_A ∩ Pathway_E	2	2	42	1.11	DPB11;RECQL
+AF	Pathway_A ∩ Pathway_F	2	2	42	1.11	TOP1;TOP2A
+BC	Pathway_B ∩ Pathway_C	2	2	42	1.11	SMC1A;TOP2B
+BD	Pathway_B ∩ Pathway_D	2	2	42	1.11	RAD21;SMC3
+BE	Pathway_B ∩ Pathway_E	2	2	42	1.11	STAG1;STAG2
+BF	Pathway_B ∩ Pathway_F	2	2	42	1.11	NIPBL;WAPL
+CD	Pathway_C ∩ Pathway_D	2	2	42	1.11	PDS5A;PDS5B
+CE	Pathway_C ∩ Pathway_E	2	2	42	1.11	ESCO1;ESCO2
+CF	Pathway_C ∩ Pathway_F	2	2	42	1.11	HDAC1;HDAC2
+DE	Pathway_D ∩ Pathway_E	2	2	42	1.11	HDAC3;HDAC8
+DF	Pathway_D ∩ Pathway_F	2	2	42	1.11	SIRT1;SIRT2
+EF	Pathway_E ∩ Pathway_F	2	2	42	1.11	KAT2A;KAT2B
+ABC	Pathway_A ∩ Pathway_B ∩ Pathway_C	3	2	25	1.11	BLM;WRN
+ABD	Pathway_A ∩ Pathway_B ∩ Pathway_D	3	2	25	1.11	MRE11;NBN
+ABE	Pathway_A ∩ Pathway_B ∩ Pathway_E	3	2	25	1.11	EXO1;RAD50
+ABF	Pathway_A ∩ Pathway_B ∩ Pathway_F	3	2	25	1.11	DNA2;FEN1
+ACD	Pathway_A ∩ Pathway_C ∩ Pathway_D	3	2	25	1.11	LIG1;LIG3
+ACE	Pathway_A ∩ Pathway_C ∩ Pathway_E	3	2	25	1.11	PARP1;PARP2
+ACF	Pathway_A ∩ Pathway_C ∩ Pathway_F	3	2	25	1.11	POLB;XRCC1
+ADE	Pathway_A ∩ Pathway_D ∩ Pathway_E	3	2	25	1.11	PCNA;RFC1
+ADF	Pathway_A ∩ Pathway_D ∩ Pathway_F	3	2	25	1.11	RFC2;RFC3
+AEF	Pathway_A ∩ Pathway_E ∩ Pathway_F	3	2	25	1.11	RFC4;RFC5
+BCD	Pathway_B ∩ Pathway_C ∩ Pathway_D	3	2	25	1.11	POLD1;POLE
+BCE	Pathway_B ∩ Pathway_C ∩ Pathway_E	3	2	25	1.11	MCM2;MCM3
+BCF	Pathway_B ∩ Pathway_C ∩ Pathway_F	3	2	25	1.11	MCM4;MCM5
+BDE	Pathway_B ∩ Pathway_D ∩ Pathway_E	3	2	25	1.11	MCM6;MCM7
+BDF	Pathway_B ∩ Pathway_D ∩ Pathway_F	3	2	25	1.11	ORC1;ORC2
+BEF	Pathway_B ∩ Pathway_E ∩ Pathway_F	3	2	25	1.11	ORC3;ORC4
+CDE	Pathway_C ∩ Pathway_D ∩ Pathway_E	3	2	25	1.11	CDC6;ORC5
+CDF	Pathway_C ∩ Pathway_D ∩ Pathway_F	3	2	25	1.11	CDT1;GMNN
+CEF	Pathway_C ∩ Pathway_E ∩ Pathway_F	3	2	25	1.11	TIPIN;TOPBP1
+DEF	Pathway_D ∩ Pathway_E ∩ Pathway_F	3	2	25	1.11	AND1;CLASPIN
+ABCD	Pathway_A ∩ Pathway_B ∩ Pathway_C ∩ Pathway_D	4	2	16	1.11	FANCA;FANCD2
+ABCE	Pathway_A ∩ Pathway_B ∩ Pathway_C ∩ Pathway_E	4	2	16	1.11	PALB2;XRCC3
+ABCF	Pathway_A ∩ Pathway_B ∩ Pathway_C ∩ Pathway_F	4	2	16	1.11	RAD51;RAD52
+ABDE	Pathway_A ∩ Pathway_B ∩ Pathway_D ∩ Pathway_E	4	2	16	1.11	RCC1;TNPO1
+ABDF	Pathway_A ∩ Pathway_B ∩ Pathway_D ∩ Pathway_F	4	2	16	1.11	CSE1L;KPNB1
+ABEF	Pathway_A ∩ Pathway_B ∩ Pathway_E ∩ Pathway_F	4	2	16	1.11	IPO7;KPNA2
+ACDE	Pathway_A ∩ Pathway_C ∩ Pathway_D ∩ Pathway_E	4	2	16	1.11	NUP98;XPO1
+ACDF	Pathway_A ∩ Pathway_C ∩ Pathway_D ∩ Pathway_F	4	2	16	1.11	NUP153;RAN
+ACEF	Pathway_A ∩ Pathway_C ∩ Pathway_E ∩ Pathway_F	4	2	16	1.11	BIRC5;TPX2
+ADEF	Pathway_A ∩ Pathway_D ∩ Pathway_E ∩ Pathway_F	4	2	16	1.11	INCENP;KIF11
+BCDE	Pathway_B ∩ Pathway_C ∩ Pathway_D ∩ Pathway_E	4	2	16	1.11	CENPE;TTK
+BCDF	Pathway_B ∩ Pathway_C ∩ Pathway_D ∩ Pathway_F	4	2	16	1.11	BUB1;MAD2L1
+BCEF	Pathway_B ∩ Pathway_C ∩ Pathway_E ∩ Pathway_F	4	2	16	1.11	AURKB;NEK2
+BDEF	Pathway_B ∩ Pathway_D ∩ Pathway_E ∩ Pathway_F	4	2	16	1.11	AURKA;PLK1
+CDEF	Pathway_C ∩ Pathway_D ∩ Pathway_E ∩ Pathway_F	4	2	16	1.11	CDC25B;CDC25C
+ABCDE	Pathway_A ∩ Pathway_B ∩ Pathway_C ∩ Pathway_D ∩ Pathway_E	5	3	11	1.67	CDC25A;CHEK2;WEE1
+ABCDF	Pathway_A ∩ Pathway_B ∩ Pathway_C ∩ Pathway_D ∩ Pathway_F	5	3	11	1.67	ATM;ATR;CHEK1
+ABCEF	Pathway_A ∩ Pathway_B ∩ Pathway_C ∩ Pathway_E ∩ Pathway_F	5	3	11	1.67	CDKN1A;CDKN2A;MDM2
+ABDEF	Pathway_A ∩ Pathway_B ∩ Pathway_D ∩ Pathway_E ∩ Pathway_F	5	3	11	1.67	CCND1;CCNE1;CDK6
+ACDEF	Pathway_A ∩ Pathway_C ∩ Pathway_D ∩ Pathway_E ∩ Pathway_F	5	3	11	1.67	BRAF;CDK2;CDK4
+BCDEF	Pathway_B ∩ Pathway_C ∩ Pathway_D ∩ Pathway_E ∩ Pathway_F	5	3	11	1.67	AKT1;MTOR;PIK3CA
+ABCDEF	Pathway_A ∩ Pathway_B ∩ Pathway_C ∩ Pathway_D ∩ Pathway_E ∩ Pathway_F	6	8	8	4.44	BRCA1;BRCA2;EGFR;KRAS;MYC;PTEN;RB1;TP53
